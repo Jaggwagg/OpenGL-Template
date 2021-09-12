@@ -4,20 +4,22 @@
 #include <stb/stb_image.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
-
-/* Screen variables */
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
 
 void processInput(GLFWwindow* window);
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
+/* Window properties */
+const GLuint SCR_WIDTH = 1280;
+const GLuint SCR_HEIGHT = 720;
+
 int main() {
 
-    /* Initalize GLFW */
+    /* Setup GLFW */
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -30,7 +32,7 @@ int main() {
     /* Create window */
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "OpenGL Window", NULL, NULL);
     if (!window) {
-        std::cout << "OPENGL_GLFW_WINDOW: FAILED TO CREATE WINDOW\n";
+        std::cout << "ERROR_GLFW:FAILED_TO_CREATE_WINDOW\n";
         glfwTerminate();
         return -1;
     }
@@ -39,7 +41,7 @@ int main() {
 
     /* Check if GLAD is not initalized */
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "OPENGL_GLAD: FAILED TO INITALIZE GLAD\n";
+        std::cout << "ERROR_GLAD:FAILED_TO_INIT_GLAD\n";
         return -1;
     }
 
@@ -49,10 +51,10 @@ int main() {
     /********************** Create rectangle **********************/
     
     /* Vertex array, buffer, and element buffer objects */
-    unsigned int VAO, VBO, EBO;
+    GLuint VAO, VBO, EBO;
 
     /* Rectangle vertices */
-    float vertices[] = {                
+    GLfloat vertices[] = {                
         // Positions(x, y, z)   // Colors           // Texture coords
         -0.5f, -0.5f, 0.0f,     1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
         -0.5f, 0.5f, 0.0f,      0.0f, 1.0f, 0.0f,   0.0f, 1.0f,
@@ -61,7 +63,7 @@ int main() {
     };
 
     /* Rectangle indices */
-    unsigned int indices[] = {
+    GLuint indices[] = {
         0, 1, 2,    // First triangle
         0, 2, 3     // Second triangle
     };
@@ -90,6 +92,7 @@ int main() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
+    /* Unbind vertex/buffer arrays/objects */
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
@@ -98,8 +101,13 @@ int main() {
     /* Flip images */
     stbi_set_flip_vertically_on_load(true);
 
-    /* Texture 1 */
-    unsigned int texture1;
+    /* Texture values */
+    GLint width, height, nrChannels;
+    const char* imagePath;
+    unsigned char* data = stbi_load(imagePath, &width, &height, &nrChannels, 0);
+
+    /************** Texture 1 **************/
+    GLuint texture1;
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -108,19 +116,18 @@ int main() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     /* Texture 1 data */
-    int width, height, nrChannels;
-    const char* imagePath = "res/images/container.jpg";
-    unsigned char* data = stbi_load(imagePath, &width, &height, &nrChannels, 0);
+    imagePath = "res/images/container.jpg";
+    data = stbi_load(imagePath, &width, &height, &nrChannels, 0);
     if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0 ,GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     } else {
-        std::cout << "ERROR_TEXTURE: FAILED TO LOAD TEXTURE:\n" << imagePath << std::endl;
+        std::cout << "ERROR_TEXTURE:FAILED_TO_LOAD_TEXTURE:\n" << imagePath << std::endl;
     }
     stbi_image_free(data);
 
-    /* Texture 2 */
-    unsigned int texture2;
+    /************** Texture 2 **************/
+    GLuint texture2;
     glGenTextures(1, &texture2);
     glBindTexture(GL_TEXTURE_2D, texture2);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -135,7 +142,7 @@ int main() {
         glTexImage2D(GL_TEXTURE_2D, 0 ,GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     } else {
-        std::cout << "ERROR_TEXTURE: FAILED TO LOAD TEXTURE:\n" << imagePath << std::endl;
+        std::cout << "ERROR_TEXTURE:FAILED_TO_LOAD_TEXTURE:\n" << imagePath << std::endl;
     }
     stbi_image_free(data);
 
@@ -162,6 +169,11 @@ int main() {
 
         /* Use shader program */
         shader.use();
+
+        /* Matrix transformations */
+        glm::mat4 transform = glm::mat4(1.0f);
+        transform = glm::rotate(transform, (GLfloat)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        shader.setMat4("transform", transform);
 
         /* Draw rectangle */
         glBindVertexArray(VAO);
